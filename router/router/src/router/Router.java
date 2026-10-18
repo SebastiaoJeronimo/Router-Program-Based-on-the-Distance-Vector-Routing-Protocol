@@ -100,7 +100,7 @@ public class Router extends javax.swing.JFrame implements Log {
         logText = new javax.swing.JTextArea();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
-        setTitle("RIT lab1 by ?????-?????");
+        setTitle("RIT lab1 by 79610-79609");
         setMaximumSize(new java.awt.Dimension(420, 1000));
         addWindowListener(new java.awt.event.WindowAdapter() {
             public void windowClosing(java.awt.event.WindowEvent evt) {
