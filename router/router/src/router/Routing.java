@@ -243,6 +243,23 @@ public class Routing {
         // Start by creating a new routing table object and add only the the valid entries
         // RoutingTable aux= new RoutingTable ();
         // ...
+        if(splitHorizon) {
+            // Prepare a temporary routing table with entries to send to the neighbour
+            aux = new RoutingTable();
+            Iterator<RouteEntry> routeIt = tab.iterator();
+            RouteEntry r;
+
+            while (routeIt != null && routeIt.hasNext()) {
+                r = routeIt.next();
+
+                // Apply Split Horizon: omit destinations whose next hop is the neighbor we are advertising to
+                if (r.next_hop == n.Name()) {
+                    continue;
+                }
+
+                aux.add_route(new RouteEntry(r.dest, r.next_hop, r.dist, win));
+            }
+        }
 
         // Return a vector with the aux routing table contents
         return (aux.size() > 0) ? aux.get_Entry_vector() : null;
