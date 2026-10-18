@@ -243,24 +243,26 @@ public class Routing {
         // Start by creating a new routing table object and add only the the valid entries
         // RoutingTable aux= new RoutingTable ();
         // ...
-        if(splitHorizon) {
-            // Prepare a temporary routing table with entries to send to the neighbour
+        
+        if (splitHorizon || holddown) {
             aux = new RoutingTable();
             Iterator<RouteEntry> routeIt = tab.iterator();
-            RouteEntry r;
-
             while (routeIt != null && routeIt.hasNext()) {
-                r = routeIt.next();
+                RouteEntry r = routeIt.next();
 
-                // Apply Split Horizon: omit destinations whose next hop is the neighbor we are advertising to
-                if (r.next_hop == n.Name()) {
+                // Step 6. The comment: remove destinations that are not accessible.
+                if (r.is_holddown() || r.dist >= Router.MAX_DISTANCE) {
+                    continue;
+                }
+                if (splitHorizon && r.next_hop == n.Name()) {
                     continue;
                 }
 
                 aux.add_route(new RouteEntry(r.dest, r.next_hop, r.dist, win));
             }
         }
-
+        
+        
         // Return a vector with the aux routing table contents
         return (aux.size() > 0) ? aux.get_Entry_vector() : null;
     }
@@ -419,7 +421,9 @@ public class Routing {
         
         // COMPLETE IN STEP 6 
         // Place here the code to handle the end of a hold down state from route re
-        // The route entry is no longer blocked; new routes can be discovered 
+        // The route entry is no longer blocked; new routes can be discovered
+        update_routing_table();
+        
         return true;
     }
 
@@ -472,6 +476,31 @@ public class Routing {
         //          and the modification to the RouteEntry, to count the hold down time
         //      This step is the most challenging: You need to keep the RouteEntries in 
         //          holddown state while the new table is being created
+        
+        if (holddown && baktab != null && baktab.is_valid()) {
+            for (RouteEntry old : baktab.get_routeset()) {
+                if (old.dest == local_name) continue;
+                RouteEntry neu = tab.get_RouteEntry(old.dest);
+                if (old.is_holddown()) {
+                    long timeLeft = old.holddown_ending_time();
+                    
+                    // A route as good as the old one: stop waiting and take it.
+                    if (neu != null && timeLeft <= 0) {
+                        old.stop_holddown(false);
+                    } else {
+                        tab.add_route(old); // keep the same object, so the timer stays
+                    }
+                }
+                else if (old.dist < Router.MAX_DISTANCE
+                        && (neu == null || neu.dist > old.dist || neu.dist > Router.MAX_DISTANCE)) {
+                    // The route vanished, or the new distance is worse.
+                    old.dist = Router.MAX_DISTANCE;
+                    old.next_hop = ' ';
+                    old.start_holddown(holddown_time, this);
+                    tab.add_route(old);
+                }
+            }
+        }
         
         // Update the Routing table in the GUI 
         update_routing_window();
